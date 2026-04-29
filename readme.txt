@@ -1,5 +1,5 @@
 WoL
 
-Wake-On-LAN sender for Windows 10+ and Linux. 
+Wake-On-LAN sender for Windows and Linux. 
 
 Source code at https://github.com/jensbrak/wol 
