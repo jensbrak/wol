@@ -90,7 +90,7 @@ if [ "$ARCHIVE" = "1" ]; then
     OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     ARCH=$(uname -m)
     TARBALL="wol-v${VERSION}-${OS}-${ARCH}.tar.gz"
-    tar -I 'gzip -9' -cf "$TARBALL" wol readme.txt
+    tar -cf - wol readme.txt | gzip -9 > "$TARBALL"
 
     if [ $? -eq 0 ]; then
         echo
