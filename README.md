@@ -1,0 +1,149 @@
+# wol
+
+Wake-on-LAN sender for Windows and Linux. Sends a magic packet to one or more
+MAC addresses over UDP broadcast, waking machines that have WoL enabled in
+their firmware.
+
+Single-file C17 implementation with no external dependencies.
+
+C was chosen primarily as a fun exercise — I wanted a single-file, minimal-dependency
+tool for a personal project. Sharing it here in case someone else finds it useful.
+
+## Building
+
+### Windows
+
+Requires Visual Studio 2017 or later (or Build Tools for Visual Studio) with
+the **Desktop development with C++** workload.
+
+```
+build.bat          # release build  →  wol.exe
+build.bat debug    # debug build    →  wold.exe
+```
+
+If `cl.exe` is already on `PATH` (e.g. from a Developer Command Prompt) the
+script uses it directly; otherwise it locates the toolchain automatically via
+`vswhere.exe`.
+
+To build manually from a Developer Command Prompt:
+
+```
+# release
+cl.exe /nologo /W4 /WX /O2 /std:c17 /MT /DNDEBUG /Fe:wol.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64
+
+# debug
+cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG /Fe:wold.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64 /DEBUG
+```
+
+### Linux
+
+Requires a C17-capable compiler (`gcc` or `clang`) on `PATH`.
+
+```sh
+chmod +x build.sh
+./build.sh          # release build  →  wol  (statically linked)
+./build.sh debug    # debug build    →  wold
+```
+
+To build manually:
+
+```sh
+# release
+cc -Wall -Wextra -Werror -O2 -std=c17 -static -DNDEBUG -o wol wol.c
+
+# debug
+cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
+```
+
+### VSCode
+
+A `.vscode` directory is included with build tasks and a debug launch configuration
+for both platforms. Use **Ctrl+Shift+B** to build and **F5** to build and launch the
+debugger. Both invoke the platform build scripts (`build.bat` or `build.sh`).
+
+## Usage
+
+```
+wol [options] <MAC> [<MAC> ...]
+```
+
+| Option | Default | Description |
+|---|---|---|
+| `-b, --broadcast <IPv4>` | `255.255.255.255` | Broadcast address to send to |
+| `-p, --port <port>` | `9` | UDP destination port |
+| `-f, --file <path>` | — | Read MAC addresses from a file |
+| `--version` | — | Print version and exit |
+| `-h, --help` | — | Show help text and exit |
+
+Option flags are case-insensitive (`-B` and `-b` are equivalent).
+
+On Windows, `/?` is also accepted as a help flag.
+
+Use `--` to end option parsing if a MAC address starts with a `-`.
+
+**Broadcast address:** The default `255.255.255.255` is the limited broadcast and is not forwarded by routers. For machines on a specific subnet, use the subnet-directed broadcast instead (e.g. `192.168.1.255`).
+
+**Firewall:** The UDP port must be open on the network path to the target. The target machine's own firewall is not a factor — WoL is handled by the NIC before the OS starts.
+
+## MAC address formats
+
+All five common formats are accepted, upper- or lowercase:
+
+```
+AA:BB:CC:DD:EE:FF
+AA-BB-CC-DD-EE-FF
+AA.BB.CC.DD.EE.FF
+AABBCCDDEEFF
+AABB.CCDD.EEFF
+```
+
+## MAC file format
+
+One MAC address per line. Blank lines and lines where `#` is the first non-whitespace
+character are ignored. Both Unix (`LF`) and Windows (`CRLF`) line endings are handled.
+
+```
+# Server room
+AA:BB:CC:DD:EE:FF
+11-22-33-44-55-66
+
+# Workstations
+AABBCCDDEEFF
+```
+
+## Examples
+
+Wake a single machine on the limited broadcast:
+
+```
+wol AA:BB:CC:DD:EE:FF
+```
+
+Wake multiple machines on a specific subnet:
+
+```
+wol -b 192.168.1.255 AA:BB:CC:DD:EE:FF 11-22-33-44-55-66
+```
+
+Wake all machines listed in a file:
+
+```
+wol -f macs.txt -b 192.168.1.255
+```
+
+Mix file and command-line sources:
+
+```
+wol -f macs.txt -b 192.168.1.255 AABB.CCDD.EEFF
+```
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | All magic packets sent successfully |
+| `1` | One or more packets failed, or invalid input |
+
+## License
+
+Copyright 2026 Jens Bråkenhielm. Licensed under the [MIT License](LICENSE).

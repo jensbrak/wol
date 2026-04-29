@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug wol",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/wold",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "Build Debug",
+            "windows": {
+                "type": "cppvsdbg",
+                "program": "${workspaceFolder}/wold.exe"
+            }
+        }
+    ]
+}
