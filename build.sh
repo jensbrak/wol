@@ -76,7 +76,7 @@ if [ "$ARCHIVE" = "1" ]; then
     fi
 
     if [ ! -f "wol" ]; then
-        echo "Error: binary not found: wol  (run ./build.sh first)" >&2
+        echo "Error: wol not found -- run ./build.sh first" >&2
         exit 1
     fi
 
