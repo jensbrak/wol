@@ -13,8 +13,12 @@ tool for a personal project. Sharing it here in case someone else finds it usefu
 
 Pre-built binaries for Windows (x64), Linux (x86_64, aarch64), and macOS (arm64) are
 published automatically via GitHub Actions when a version tag is pushed. See the
-[Releases](../../releases) page. For manual build commands and compiler flags, see the
-header comment in [`wol.c`](wol.c).
+[Releases](../../releases) page.
+
+Build scripts are included in the repo for convenient local builds and are also used
+by GitHub Actions. They are intentionally kept simple and platform-specific.
+
+For manual build commands and compiler flags, see the header comment in [`wol.c`](wol.c).
 
 ### Windows
 
