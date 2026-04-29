@@ -6,15 +6,12 @@ on:
       - 'v*'
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
 
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         shell: cmd
         run: build.bat
@@ -22,7 +19,7 @@ jobs:
         shell: cmd
         run: build.bat archive
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows
           path: wol-v*-windows-x64.zip
@@ -30,13 +27,13 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: chmod +x build.sh && ./build.sh
       - name: Archive
         run: ./build.sh archive
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux
           path: wol-v*-linux-*.tar.gz
@@ -44,13 +41,13 @@ jobs:
   build-linux-arm64:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: chmod +x build.sh && ./build.sh
       - name: Archive
         run: ./build.sh archive
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arm64
           path: wol-v*-linux-*.tar.gz
@@ -58,13 +55,13 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build
         run: chmod +x build.sh && ./build.sh
       - name: Archive
         run: ./build.sh archive
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos
           path: wol-v*-darwin-*.tar.gz
@@ -77,9 +74,9 @@ jobs:
       contents: write
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
       - name: Publish release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             windows/wol-v*-windows-x64.zip
