@@ -1,6 +1,6 @@
 # wol
 
-Wake-on-LAN sender for Windows and Linux. Sends a magic packet to one or more
+Wake-on-LAN sender for Windows, Linux, and macOS. Sends a magic packet to one or more
 MAC addresses over UDP broadcast, waking machines that have WoL enabled in
 their firmware.
 
@@ -10,6 +10,11 @@ C was chosen primarily as a fun exercise — I wanted a single-file, minimal-dep
 tool for a personal project. Sharing it here in case someone else finds it useful.
 
 ## Building
+
+Pre-built binaries for Windows (x64), Linux (x86_64, aarch64), and macOS (arm64) are
+published automatically via GitHub Actions when a version tag is pushed. See the
+[Releases](../../releases) page. For manual build commands and compiler flags, see the
+header comment in [`wol.c`](wol.c).
 
 ### Windows
 
@@ -25,16 +30,6 @@ If `cl.exe` is already on `PATH` (e.g. from a Developer Command Prompt) the
 script uses it directly; otherwise it locates the toolchain automatically via
 `vswhere.exe`.
 
-To build manually from a Developer Command Prompt:
-
-```
-# release
-cl.exe /nologo /W4 /WX /O2 /std:c17 /MT /DNDEBUG /Fe:wol.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64
-
-# debug
-cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG /Fe:wold.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64 /DEBUG
-```
-
 ### Linux
 
 Requires a C17-capable compiler (`gcc` or `clang`) on `PATH`.
@@ -45,21 +40,22 @@ chmod +x build.sh
 ./build.sh debug    # debug build    →  wold
 ```
 
-To build manually:
+### macOS
+
+Requires Xcode Command Line Tools (`xcode-select --install`).
 
 ```sh
-# release
-cc -Wall -Wextra -Werror -O2 -std=c17 -static -DNDEBUG -o wol wol.c
-
-# debug
-cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
+chmod +x build.sh
+./build.sh          # release build  →  wol
+./build.sh debug    # debug build    →  wold
 ```
 
 ### VSCode
 
 A `.vscode` directory is included with build tasks and a debug launch configuration
-for both platforms. Use **Ctrl+Shift+B** to build and **F5** to build and launch the
-debugger. Both invoke the platform build scripts (`build.bat` or `build.sh`).
+for all three platforms. Use **Ctrl+Shift+B** to build and **F5** to build and launch the
+debugger. Both invoke the platform build scripts (`build.bat` or `build.sh`). On macOS,
+the debugger uses `lldb` instead of `gdb`.
 
 ## Usage
 

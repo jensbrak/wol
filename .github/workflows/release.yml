@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: cmd
+        run: build.bat
+      - name: Archive
+        shell: cmd
+        run: build.bat archive
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: wol-v*-windows-x64.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: chmod +x build.sh && ./build.sh
+      - name: Archive
+        run: ./build.sh archive
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: wol-v*-linux-*.tar.gz
+
+  build-linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: chmod +x build.sh && ./build.sh
+      - name: Archive
+        run: ./build.sh archive
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: wol-v*-linux-*.tar.gz
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: chmod +x build.sh && ./build.sh
+      - name: Archive
+        run: ./build.sh archive
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: wol-v*-darwin-*.tar.gz
+
+  release:
+    needs: [build-windows, build-linux, build-linux-arm64, build-macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            windows/wol-v*-windows-x64.zip
+            linux/wol-v*-linux-*.tar.gz
+            linux-arm64/wol-v*-linux-*.tar.gz
+            macos/wol-v*-darwin-*.tar.gz

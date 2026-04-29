@@ -23,6 +23,9 @@
             "windows": {
                 "type": "cppvsdbg",
                 "program": "${workspaceFolder}/wold.exe"
+            },
+            "osx": {
+                "MIMode": "lldb"
             }
         }
     ]

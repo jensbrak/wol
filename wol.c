@@ -1,7 +1,7 @@
 /*
  * wol.c
  *
- * Wake-On-LAN sender for Windows and Linux.
+ * Wake-On-LAN sender for Windows, Linux, and macOS.
  * A single-file console application written in C (C17).
  *
  * Copyright 2026 Jens Bråkenhielm
@@ -16,9 +16,13 @@
  *      release: cc -Wall -Wextra -Werror -O2 -std=c17 -static -DNDEBUG -o wol wol.c
  *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
  *
+ *   On macOS:
+ *      release: cc -Wall -Wextra -Werror -O2 -std=c17 -DNDEBUG -o wol wol.c
+ *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
+ *
  *   Or use the build scripts bundled with this file:
  *      build.bat (Windows) — initialises the MSVC toolchain automatically if needed
- *      build.sh  (Linux)
+ *      build.sh  (Linux, macOS)
  *
  * Program flow:
  *   -> parse and validate CLI options (including broadcast address)
@@ -78,7 +82,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define WOL_VERSION         "1.0.2"
+#define WOL_VERSION         "1.0.3"
 #define DEFAULT_BROADCAST   "255.255.255.255"
 #define DEFAULT_PORT        9
 #define MAC_LEN             6

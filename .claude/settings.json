@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"z:/Apps/wol\" log --oneline)",
+      "Bash(git -C \"z:/Apps/wol\" log 6ebc237 --format=\"%B\")",
+      "Bash(gh release *)",
+      "Bash(git -C \"z:/Apps/wol\" remote get-url origin)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)"
+    ]
+  }
+}

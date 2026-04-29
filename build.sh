@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: MIT
 #
 # ---------------------------------------------------------------------------
-# build.sh  -  Builds wol for Linux
+# build.sh  -  Builds wol for Linux and macOS
 #
 # Usage:
-#   build.sh            release build   ->  wol  (statically linked)
+#   build.sh            release build   ->  wol  (statically linked on Linux)
 #   build.sh debug      debug build     ->  wold (debug symbols, no optimisation)
-#   build.sh archive    create release archive  ->  wol-vX.Y.Z-linux-ARCH.tar.gz
+#   build.sh archive    create release archive  ->  wol-vX.Y.Z-OS-ARCH.tar.gz
 #                       (wol must exist; run ./build.sh first)
 #
 # Build:   C17-capable compiler (gcc or clang) on PATH
-# Archive: tar + gzip -9 (max compression)
+# Archive: tar + gzip -9 (max compression); archive name reflects OS and architecture
 # Version: extracted automatically from wol.c
 # ---------------------------------------------------------------------------
 
@@ -46,6 +46,8 @@ if [ "$ARCHIVE" = "0" ]; then
 
     if [ "$DEBUG" = "1" ]; then
         cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o "$OUT" wol.c
+    elif [ "$(uname -s)" = "Darwin" ]; then
+        cc -Wall -Wextra -Werror -O2 -std=c17 -DNDEBUG -o "$OUT" wol.c
     else
         cc -Wall -Wextra -Werror -O2 -std=c17 -static -DNDEBUG -o "$OUT" wol.c
     fi
@@ -85,8 +87,9 @@ if [ "$ARCHIVE" = "1" ]; then
         exit 1
     fi
 
+    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     ARCH=$(uname -m)
-    TARBALL="wol-v${VERSION}-linux-${ARCH}.tar.gz"
+    TARBALL="wol-v${VERSION}-${OS}-${ARCH}.tar.gz"
     tar -I 'gzip -9' -cf "$TARBALL" wol readme.txt
 
     if [ $? -eq 0 ]; then
