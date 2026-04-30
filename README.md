@@ -4,7 +4,7 @@ Wake-on-LAN sender for Windows, Linux, and macOS. Sends a magic packet to one or
 MAC addresses over UDP broadcast, waking machines that have WoL enabled in
 their firmware.
 
-Single-file C17 implementation with no external dependencies.
+Console application with single-file C17 implementation and no external dependencies.
 
 C was chosen primarily as a fun exercise — I wanted a single-file, minimal-dependency
 tool for a personal project. Sharing it here in case someone else finds it useful.
