@@ -158,6 +158,7 @@ static int parse_mac(const char *text, byte out[MAC_LEN])
         sep = 0;
     } else if (len == 17) {
         sep = text[2];
+        if (sep != ':' && sep != '-' && sep != '.') return 0;
         if (text[5]!=sep || text[8]!=sep || text[11]!=sep || text[14]!=sep) return 0;
     } else if (len == 14) {
         sep = '.';
@@ -265,7 +266,7 @@ static void load_mac_file(FILE *f, struct mac *macs, int offset)
 /* ── Network / socket operations ─────────────────────────────────────────── */
 
 /* Initialises the network subsystem. On Windows, loads Winsock 2.2; on Linux
- * this is trivial (POSIX sockets need no initialisation). Returns 1 on success. */
+ * and macOS this is trivial (POSIX sockets need no initialisation). Returns 1 on success. */
 static int initialize_network(void)
 {
 #ifdef _WIN32
@@ -519,8 +520,8 @@ int main(int argc, char *argv[])
     macs = (struct mac *)calloc((size_t)mac_count, sizeof(*macs));
     if (macs == NULL) { fprintf(stderr, "Error: out of memory\n"); goto cleanup; }
 
-    /* CLI MACs first: fallible (parse_mac can reject), no I/O.
-     * File MACs second: infallible (scan_mac_file pre-validated), requires I/O. */
+    /* Validate CLI MACs before loading the file: they are fallible (parse_mac can
+     * reject) and require no I/O, so catch bad input early. Stored after file MACs. */
     for (i = 0; i < cli_count; ++i) {
         int idx = file_count + i;
         const char *str = argv[opts.first_mac_index + i];
