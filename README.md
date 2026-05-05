@@ -54,6 +54,18 @@ chmod +x build.sh
 ./build.sh debug    # debug build    →  wold
 ```
 
+### Debug builds and self-test
+
+Debug builds (the `debug` argument to either build script) define `WOL_SELF_TEST`,
+enabling a hidden `--self-test` flag:
+
+```
+wold --self-test
+```
+
+This runs the built-in test suite and exits 0 on pass, 1 on failure. It is not
+listed in `--help` and is not available in release builds.
+
 ### VSCode
 
 A `.vscode` directory is included with build tasks and a debug launch configuration

@@ -45,7 +45,7 @@ if [ "$ARCHIVE" = "0" ]; then
     fi
 
     if [ "$DEBUG" = "1" ]; then
-        cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o "$OUT" wol.c
+        cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -DWOL_SELF_TEST -o "$OUT" wol.c
     elif [ "$(uname -s)" = "Darwin" ]; then
         cc -Wall -Wextra -Werror -O2 -std=c17 -DNDEBUG -o "$OUT" wol.c
     else

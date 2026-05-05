@@ -79,7 +79,7 @@ call "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul 2>&1
 
 :build
 if "%DEBUG%"=="1" (
-    cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG ^
+    cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG /DWOL_SELF_TEST ^
         /Fe:"%OUT%" wol.c ^
         /link /SUBSYSTEM:CONSOLE /MACHINE:X64 /DEBUG
 ) else (

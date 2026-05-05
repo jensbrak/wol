@@ -10,21 +10,22 @@
  * Build with:
  *   On Windows (needs MSVC toolchain initialized):
  *      release: cl.exe /nologo /W4 /WX /O2 /std:c17 /MT /DNDEBUG /Fe:wol.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64
- *      debug:   cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG /Fe:wold.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64 /DEBUG
+ *      debug:   cl.exe /nologo /W4 /WX /Od /Zi /std:c17 /MTd /DDEBUG /DWOL_SELF_TEST /Fe:wold.exe wol.c /link /SUBSYSTEM:CONSOLE /MACHINE:X64 /DEBUG
  *
  *   On Linux:
  *      release: cc -Wall -Wextra -Werror -O2 -std=c17 -static -DNDEBUG -o wol wol.c
- *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
+ *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -DWOL_SELF_TEST -o wold wol.c
  *
  *   On macOS:
  *      release: cc -Wall -Wextra -Werror -O2 -std=c17 -DNDEBUG -o wol wol.c
- *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -o wold wol.c
+ *      debug:   cc -Wall -Wextra -Werror -g -O0 -std=c17 -DDEBUG -DWOL_SELF_TEST -o wold wol.c
  *
  *   Or use the build scripts bundled with this file:
  *      build.bat (Windows) — initialises the MSVC toolchain automatically if needed
  *      build.sh  (Linux, macOS)
  *
  * Program flow:
+ *   (debug builds: --self-test runs the built-in test suite and exits early)
  *   -> parse and validate CLI options (broadcast accepts plain IPv4 or CIDR notation)
  *   -> collect and validate MAC addresses (from file and/or CLI args)
  *   -> initialise network
@@ -527,6 +528,141 @@ static int parse_cli(int argc, char *argv[], struct cli *opts)
 }
 
 
+/* ── Self-test suite ─────────────────────────────────────────────────────── */
+/*
+ * Compiled only when WOL_SELF_TEST is defined (debug builds). Activated by
+ * --self-test; not listed in --help. Exits 0 on pass, 1 on any failure.
+ */
+#ifdef WOL_SELF_TEST
+
+static int tests_run, tests_failed;
+
+#define CHECK(cond) do { \
+    ++tests_run; \
+    if (!(cond)) { \
+        ++tests_failed; \
+        fprintf(stderr, "FAIL  line %-4d  %s\n", __LINE__, #cond); \
+    } \
+} while (0)
+
+static void test_parse_mac(void)
+{
+    byte mac[MAC_LEN];
+
+    /* Valid: all five formats */
+    CHECK(parse_mac("AABBCCDDEEFF", mac));
+    CHECK(mac[0] == 0xAA && mac[3] == 0xDD && mac[5] == 0xFF);
+
+    CHECK(parse_mac("AA:BB:CC:DD:EE:FF", mac));
+    CHECK(mac[0] == 0xAA && mac[5] == 0xFF);
+
+    CHECK(parse_mac("AA-BB-CC-DD-EE-FF", mac));
+    CHECK(mac[0] == 0xAA && mac[5] == 0xFF);
+
+    CHECK(parse_mac("AA.BB.CC.DD.EE.FF", mac));
+    CHECK(mac[0] == 0xAA && mac[5] == 0xFF);
+
+    CHECK(parse_mac("AABB.CCDD.EEFF", mac));
+    CHECK(mac[0] == 0xAA && mac[2] == 0xCC && mac[5] == 0xFF);
+
+    /* Lowercase and mixed case */
+    CHECK(parse_mac("aa:bb:cc:dd:ee:ff", mac));
+    CHECK(mac[0] == 0xAA && mac[5] == 0xFF);
+
+    CHECK(parse_mac("aAbBcCdDeEfF", mac));
+    CHECK(mac[0] == 0xAA && mac[5] == 0xFF);
+
+    /* Invalid: NULL, bad length, bad hex, mixed separators, spaces */
+    CHECK(!parse_mac(NULL, mac));
+    CHECK(!parse_mac("", mac));
+    CHECK(!parse_mac("AABBCCDDEE", mac));
+    CHECK(!parse_mac("AABBCCDDEEFF00", mac));
+    CHECK(!parse_mac("GG:BB:CC:DD:EE:FF", mac));
+    CHECK(!parse_mac("AA:BB-CC:DD:EE:FF", mac));
+    CHECK(!parse_mac("AA BB CC DD EE FF", mac));
+}
+
+static void test_parse_port(void)
+{
+    unsigned short port;
+
+    CHECK(parse_port("1", &port) && port == 1);
+    CHECK(parse_port("9", &port) && port == 9);
+    CHECK(parse_port("65535", &port) && port == 65535);
+
+    CHECK(!parse_port("0", &port));
+    CHECK(!parse_port("65536", &port));
+    CHECK(!parse_port("", &port));
+    CHECK(!parse_port("abc", &port));
+    CHECK(!parse_port(NULL, &port));
+    CHECK(!parse_port("9x", &port));
+}
+
+static void test_parse_broadcast(void)
+{
+    struct in_addr addr, expected;
+
+    /* Plain IPv4 */
+    CHECK(parse_broadcast("255.255.255.255", &addr));
+    inet_pton(AF_INET, "255.255.255.255", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    CHECK(parse_broadcast("192.168.1.255", &addr));
+    inet_pton(AF_INET, "192.168.1.255", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    /* CIDR: host address yields directed broadcast */
+    CHECK(parse_broadcast("192.168.1.50/24", &addr));
+    inet_pton(AF_INET, "192.168.1.255", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    CHECK(parse_broadcast("10.0.0.1/8", &addr));
+    inet_pton(AF_INET, "10.255.255.255", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    /* Boundary prefix values */
+    CHECK(parse_broadcast("192.168.1.1/32", &addr));
+    inet_pton(AF_INET, "192.168.1.1", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    CHECK(parse_broadcast("192.168.1.1/0", &addr));
+    inet_pton(AF_INET, "255.255.255.255", &expected);
+    CHECK(addr.s_addr == expected.s_addr);
+
+    /* Invalid */
+    CHECK(!parse_broadcast("not-an-ip", &addr));
+    CHECK(!parse_broadcast("192.168.1.1/33", &addr));
+    CHECK(!parse_broadcast("/24", &addr));
+    CHECK(!parse_broadcast("192.168.1.1/", &addr));
+}
+
+static int run_self_tests(void)
+{
+    tests_run = tests_failed = 0;
+
+    if (!initialize_network()) {
+        fprintf(stderr, "self-test: network init failed\n");
+        return 1;
+    }
+
+    test_parse_mac();
+    test_parse_port();
+    test_parse_broadcast();
+
+    net_cleanup();
+
+    if (tests_failed == 0)
+        printf("self-test: %d/%d passed\n", tests_run, tests_run);
+    else
+        printf("self-test: %d/%d passed, %d FAILED\n",
+               tests_run - tests_failed, tests_run, tests_failed);
+
+    return tests_failed > 0 ? 1 : 0;
+}
+
+#endif /* WOL_SELF_TEST */
+
+
 /* ── Entry point ─────────────────────────────────────────────────────────── */
 
 int main(int argc, char *argv[])
@@ -540,6 +676,11 @@ int main(int argc, char *argv[])
     int file_count = 0;
     int cli_count, mac_count, i, all_ok = 1;
     int ret = 1;
+
+#ifdef WOL_SELF_TEST
+    if (argc == 2 && strcmp(argv[1], "--self-test") == 0)
+        return run_self_tests();
+#endif
 
     if (!parse_cli(argc, argv, &opts)) {
         fprintf(stderr, "Try '%s --help' for usage.\n", argv[0]);
