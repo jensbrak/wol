@@ -40,8 +40,10 @@
 
 /* ── Platform compatibility ──────────────────────────────────────────────── */
 /*
- * All platform differences go here. The rest of the code uses the portable
- * aliases defined below: net_close, net_error, net_cleanup, str_icmp.
+ * Platform-specific includes, type definitions, and function-like macros
+ * (net_close, net_error, net_cleanup, str_icmp) are consolidated here.
+ * Where Windows and POSIX differ in behaviour rather than naming, the
+ * relevant function carries its own #ifdef _WIN32 block.
  */
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
