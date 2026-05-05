@@ -54,7 +54,7 @@ chmod +x build.sh
 ./build.sh debug    # debug build    →  wold
 ```
 
-### Debug builds and self-test
+### Self-test
 
 Debug builds (the `debug` argument to either build script) define `WOL_SELF_TEST`,
 enabling a hidden `--self-test` flag:
@@ -68,10 +68,15 @@ listed in `--help` and is not available in release builds.
 
 ### VSCode
 
-A `.vscode` directory is included with build tasks and a debug launch configuration
+A `.vscode` directory is included with build tasks and two debug launch configurations
 for all three platforms. Use **Ctrl+Shift+B** to build and **F5** to build and launch the
-debugger. Both invoke the platform build scripts (`build.bat` or `build.sh`). On macOS,
+debugger. Both shortcuts invoke the platform build scripts (`build.bat` or `build.sh`). On macOS,
 the debugger uses `lldb` instead of `gdb`.
+
+Select the active configuration from the Run and Debug dropdown:
+
+- **Debug wol** — launches with no arguments
+- **Debug self-test** — launches with `--self-test`
 
 ## Usage
 

@@ -25,7 +25,7 @@
  *      build.sh  (Linux, macOS)
  *
  * Program flow:
- *   (debug builds: --self-test runs the built-in test suite and exits early)
+ *   (debug builds: --self-test runs the built-in test suite and exits)
  *   -> parse and validate CLI options (broadcast accepts plain IPv4 or CIDR notation)
  *   -> collect and validate MAC addresses (from file and/or CLI args)
  *   -> initialise network
@@ -588,10 +588,12 @@ static void test_parse_port(void)
 {
     unsigned short port;
 
+    /* Valid */
     CHECK(parse_port("1", &port) && port == 1);
     CHECK(parse_port("9", &port) && port == 9);
     CHECK(parse_port("65535", &port) && port == 65535);
 
+    /* Invalid */
     CHECK(!parse_port("0", &port));
     CHECK(!parse_port("65536", &port));
     CHECK(!parse_port("", &port));
