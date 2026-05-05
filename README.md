@@ -69,7 +69,7 @@ wol [options] <MAC> [<MAC> ...]
 
 | Option | Default | Description |
 |---|---|---|
-| `-b, --broadcast <IPv4>` | `255.255.255.255` | Broadcast address to send to |
+| `-b, --broadcast <addr>` | `255.255.255.255` | Broadcast address: IPv4 or `IPv4/prefix` CIDR |
 | `-p, --port <port>` | `9` | UDP destination port |
 | `-f, --file <path>` | — | Read MAC addresses from a file |
 | `--version` | — | Print version and exit |
@@ -81,7 +81,7 @@ On Windows, `/?` is also accepted as a help flag.
 
 Use `--` to end option parsing if a MAC address starts with a `-`.
 
-**Broadcast address:** The default `255.255.255.255` is the limited broadcast and is not forwarded by routers. For machines on a specific subnet, use the subnet-directed broadcast instead (e.g. `192.168.1.255`).
+**Broadcast address:** The default `255.255.255.255` is the limited broadcast and is not forwarded by routers. For machines on a specific subnet, use the subnet-directed broadcast (e.g. `192.168.1.255`), or let `wol` compute it from any host address on the subnet using CIDR notation (e.g. `-b 192.168.1.50/24`).
 
 **Firewall:** The UDP port must be open on the network path to the target. The target machine's own firewall is not a factor — WoL is handled by the NIC before the OS starts.
 
@@ -135,6 +135,12 @@ Mix file and command-line sources:
 
 ```
 wol -f macs.txt -b 192.168.1.255 AABB.CCDD.EEFF
+```
+
+Wake machines on a subnet, letting `wol` compute the broadcast from a host address:
+
+```
+wol -b 192.168.1.50/24 AA:BB:CC:DD:EE:FF
 ```
 
 ## Exit codes

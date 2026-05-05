@@ -25,7 +25,7 @@
  *      build.sh  (Linux, macOS)
  *
  * Program flow:
- *   -> parse and validate CLI options (including broadcast address)
+ *   -> parse and validate CLI options (broadcast accepts plain IPv4 or CIDR notation)
  *   -> collect and validate MAC addresses (from file and/or CLI args)
  *   -> initialise network
  *   -> open UDP socket
@@ -81,6 +81,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define WOL_VERSION         "1.0.4"
 #define DEFAULT_BROADCAST   "255.255.255.255"
@@ -108,37 +109,15 @@ struct mac {
 };
 
 
-/* ── Low-level helpers ───────────────────────────────────────────────────── */
+/* ── MAC address parsing and formatting ──────────────────────────────────── */
 
 /* Returns the numeric value (0-15) of a hex digit (case-insensitive), or 16 if invalid. */
 static unsigned hex_nibble(unsigned char c)
 {
     if (c >= '0' && c <= '9') return c - '0';
-    c |= 32;
+    c |= 32;  /* fold to lowercase (ASCII bit 5) */
     return (c >= 'a' && c <= 'f') ? c - 'a' + 10U : 16U;
 }
-
-/* Parses a decimal string as a UDP port number (1-65535). Returns 1 on success. */
-static int parse_port(const char *text, unsigned short *port_out)
-{
-    char *end;
-    unsigned long value;
-
-    if (text == NULL || *text == '\0') {
-        return 0;
-    }
-
-    value = strtoul(text, &end, 10);
-    if (*end != '\0' || value == 0UL || value > 65535UL) {
-        return 0;
-    }
-
-    *port_out = (unsigned short)value;
-    return 1;
-}
-
-
-/* ── MAC address parsing and formatting ──────────────────────────────────── */
 
 /* Parses a MAC address in any supported format into out[MAC_LEN]. Returns 1 on
  * success, 0 if text is NULL or not a valid MAC.
@@ -263,7 +242,7 @@ static void load_mac_file(FILE *f, struct mac *macs, int offset)
 }
 
 
-/* ── Network / socket operations ─────────────────────────────────────────── */
+/* ── Network ─────────────────────────────────────────────────────────────── */
 
 /* Fills buf with the system description of err, always NUL-terminating.
  * On Windows, FormatMessage appends \r\n — this function strips that trailing
@@ -281,6 +260,73 @@ static void net_error_str(int err, char *buf, size_t buf_len)
     if (strerror_r(err, buf, buf_len) != 0)
         snprintf(buf, buf_len, "unknown error");
 #endif
+}
+
+/* Parses a decimal string as a UDP port number (1-65535). Returns 1 on success. */
+static int parse_port(const char *text, unsigned short *port_out)
+{
+    char *end;
+    unsigned long value;
+
+    if (text == NULL || *text == '\0') {
+        return 0;
+    }
+
+    value = strtoul(text, &end, 10);
+    if (*end != '\0' || value == 0UL || value > 65535UL) {
+        return 0;
+    }
+
+    *port_out = (unsigned short)value;
+    return 1;
+}
+
+/* Parses a broadcast address from a plain IPv4 string or CIDR notation
+ * (e.g. 192.168.1.50/24). CIDR input yields the directed broadcast address
+ * for that subnet. Returns 1 on success, 0 on invalid input. */
+static int parse_broadcast(const char *text, struct in_addr *addr_out)
+{
+    const char *slash;
+    char ip_buf[16];
+    size_t ip_len;
+    char *end;
+    unsigned long prefix;
+    struct in_addr addr;
+    uint32_t ip, mask, bcast;
+
+    slash = strchr(text, '/');
+    if (slash == NULL)
+        return inet_pton(AF_INET, text, addr_out) == 1;
+
+    ip_len = (size_t)(slash - text);
+    if (ip_len == 0 || ip_len >= sizeof(ip_buf)) return 0;
+    memcpy(ip_buf, text, ip_len);
+    ip_buf[ip_len] = '\0';
+
+    if (inet_pton(AF_INET, ip_buf, &addr) != 1) return 0;
+
+    if (slash[1] == '\0') return 0;
+    prefix = strtoul(slash + 1, &end, 10);
+    if (*end != '\0' || prefix > 32) return 0;
+
+    /* Arithmetic requires host byte order (inet_pton stores network/big-endian).
+     * prefix=0 handled separately: shifting a uint32_t by 32 is undefined behaviour. */
+    ip    = (uint32_t)ntohl(addr.s_addr);
+    mask  = (prefix == 0u) ? 0u : ~(uint32_t)0u << (32u - (uint32_t)prefix);
+    bcast = ip | ~mask;          /* directed broadcast: set all host bits */
+    addr.s_addr = htonl(bcast);
+
+    *addr_out = addr;
+    return 1;
+}
+
+/* Assembles a sockaddr_in from an already-validated address and port. Cannot fail. */
+static void build_dest_addr(struct in_addr addr, unsigned short port, struct sockaddr_in *dest)
+{
+    memset(dest, 0, sizeof(*dest));
+    dest->sin_family = AF_INET;
+    dest->sin_port   = htons(port);
+    dest->sin_addr   = addr;
 }
 
 /* Initialises the network subsystem. On Windows, loads Winsock 2.2; on Linux
@@ -305,15 +351,6 @@ static int initialize_network(void)
     }
 #endif
     return 1;
-}
-
-/* Assembles a sockaddr_in from an already-validated address and port. Cannot fail. */
-static void build_dest_addr(struct in_addr addr, unsigned short port, struct sockaddr_in *dest)
-{
-    memset(dest, 0, sizeof(*dest));
-    dest->sin_family = AF_INET;
-    dest->sin_port   = htons(port);
-    dest->sin_addr   = addr;
 }
 
 /* Opens a UDP socket with SO_BROADCAST enabled.
@@ -387,7 +424,7 @@ static void print_help(const char *prog)
 {
     printf("Usage: %s [options] <MAC> [<MAC> ...]\n\n", prog);
     printf("Options:\n");
-    printf("  -b, --broadcast <IPv4>   Broadcast IPv4 address (default: %s)\n", DEFAULT_BROADCAST);
+    printf("  -b, --broadcast <addr>   Broadcast address: IPv4 or IPv4/prefix (default: %s)\n", DEFAULT_BROADCAST);
     printf("  -p, --port <port>        UDP port number (default: %d)\n", DEFAULT_PORT);
     printf("  -f, --file <path>        Read MAC addresses from a file (one per line)\n");
     printf("      --version            Show version number and exit\n");
@@ -409,6 +446,7 @@ static void print_help(const char *prog)
     printf("  %s 00:11:22:33:44:55 66-77-88-99-AA-BB\n", prog);
     printf("  %s -f macs.txt -b 192.168.10.255\n", prog);
     printf("  %s -b 192.168.10.255 -p 9 AABBCCDDEEFF\n", prog);
+    printf("  %s -b 192.168.10.50/24 AABBCCDDEEFF\n", prog);
 }
 
 /* Parses and validates command-line arguments into opts. Returns 1 on success
@@ -455,7 +493,7 @@ static int parse_cli(int argc, char *argv[], struct cli *opts)
                 fprintf(stderr, "Error: missing value after %s\n", argv[i]);
                 return 0;
             }
-            if (inet_pton(AF_INET, argv[++i], &opts->broadcast_addr) != 1) {
+            if (!parse_broadcast(argv[++i], &opts->broadcast_addr)) {
                 fprintf(stderr, "Error: invalid broadcast address: %s\n", argv[i]);
                 return 0;
             }
