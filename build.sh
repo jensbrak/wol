@@ -7,7 +7,8 @@
 #
 # Usage:
 #   build.sh            release build   ->  wol  (statically linked on Linux)
-#   build.sh debug      debug build     ->  wold (debug symbols, no optimisation)
+#   build.sh debug      debug build     ->  wold
+#                       (debug symbols, self-test enabled, no optimisation)
 #   build.sh archive    create release archive  ->  wol-vX.Y.Z-OS-ARCH.tar.gz
 #                       (wol must exist; run ./build.sh first)
 #

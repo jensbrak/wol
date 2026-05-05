@@ -87,6 +87,7 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
+          generate_release_notes: true
           files: |
             windows/wol-v*-windows-x64.zip
             linux/wol-v*-linux-*.tar.gz

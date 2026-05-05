@@ -16,7 +16,7 @@ published automatically via GitHub Actions when a version tag is pushed. See the
 [Releases](../../releases) page.
 
 Build scripts are included in the repo for convenient local builds and are also used
-by GitHub Actions. They are intentionally kept simple and platform-specific.
+by GitHub Actions.
 
 For manual build commands and compiler flags, see the header comment in [`wol.c`](wol.c).
 
@@ -63,8 +63,9 @@ enabling a hidden `--self-test` flag:
 wold --self-test
 ```
 
-This runs the built-in test suite and exits 0 on pass, 1 on failure. It is not
-listed in `--help` and is not available in release builds.
+This runs the built-in unit tests for the MAC, port, and broadcast parsers,
+and exits 0 on pass, 1 on failure. It is not listed in `--help` and is not
+available in release builds.
 
 ### VSCode
 
@@ -95,8 +96,6 @@ wol [options] <MAC> [<MAC> ...]
 Option flags are case-insensitive (`-B` and `-b` are equivalent).
 
 On Windows, `/?` is also accepted as a help flag.
-
-Use `--` to end option parsing if a MAC address starts with a `-`.
 
 **Broadcast address:** The default `255.255.255.255` is the limited broadcast and is not forwarded by routers. For machines on a specific subnet, use the subnet-directed broadcast (e.g. `192.168.1.255`), or let `wol` compute it from any host address on the subnet using CIDR notation (e.g. `-b 192.168.1.50/24`).
 

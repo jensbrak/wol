@@ -9,7 +9,8 @@ setlocal
 ::
 :: Usage:
 ::   build.bat             release build   ->  wol.exe
-::   build.bat debug       debug build     ->  wold.exe  (debug symbols, no optimisation)
+::   build.bat debug       debug build     ->  wold.exe
+::                         (debug symbols, self-test enabled, no optimisation)
 ::   build.bat archive     create release archive  ->  wol-vX.Y.Z-windows-x64.zip
 ::                         (wol.exe must exist; run build.bat first)
 ::
