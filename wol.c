@@ -86,7 +86,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#define WOL_VERSION         "1.0.4"
+#define WOL_VERSION         "1.1.0"
 #define DEFAULT_BROADCAST   "255.255.255.255"
 #define DEFAULT_PORT        9
 #define MAC_LEN             6
