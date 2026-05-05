@@ -265,6 +265,24 @@ static void load_mac_file(FILE *f, struct mac *macs, int offset)
 
 /* ── Network / socket operations ─────────────────────────────────────────── */
 
+/* Fills buf with the system description of err, always NUL-terminating.
+ * On Windows, FormatMessage appends \r\n — this function strips that trailing
+ * whitespace so the string can be embedded directly in fprintf format strings. */
+static void net_error_str(int err, char *buf, size_t buf_len)
+{
+#ifdef _WIN32
+    DWORD n = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                              NULL, (DWORD)err, 0, buf, (DWORD)(buf_len - 1), NULL);
+    while (n > 0 && (unsigned char)buf[n - 1] <= ' ')
+        buf[--n] = '\0';
+    if (n == 0)
+        snprintf(buf, buf_len, "unknown error");
+#else
+    if (strerror_r(err, buf, buf_len) != 0)
+        snprintf(buf, buf_len, "unknown error");
+#endif
+}
+
 /* Initialises the network subsystem. On Windows, loads Winsock 2.2; on Linux
  * and macOS this is trivial (POSIX sockets need no initialisation). Returns 1 on success. */
 static int initialize_network(void)
@@ -274,7 +292,9 @@ static int initialize_network(void)
     int rc = WSAStartup(MAKEWORD(2, 2), &wsa);
 
     if (rc != 0) {
-        fprintf(stderr, "Error: WSAStartup failed: %d\n", rc);
+        char errbuf[256];
+        net_error_str(rc, errbuf, sizeof(errbuf));
+        fprintf(stderr, "Error: WSAStartup failed: %s (%d)\n", errbuf, rc);
         return 0;
     }
 
@@ -306,7 +326,10 @@ static int open_udp_socket(SOCKET *sock_out)
 
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == INVALID_SOCKET) {
-        fprintf(stderr, "Error: socket failed: %d\n", net_error());
+        int err = net_error();
+        char errbuf[256];
+        net_error_str(err, errbuf, sizeof(errbuf));
+        fprintf(stderr, "Error: socket failed: %s (%d)\n", errbuf, err);
         return 0;
     }
 
@@ -314,8 +337,10 @@ static int open_udp_socket(SOCKET *sock_out)
                     (const char *)&on, (socklen_t)sizeof(on));
     if (rc == SOCKET_ERROR) {
         int err = net_error();
+        char errbuf[256];
+        net_error_str(err, errbuf, sizeof(errbuf));
         net_close(sock);
-        fprintf(stderr, "Error: setsockopt(SO_BROADCAST) failed: %d\n", err);
+        fprintf(stderr, "Error: setsockopt(SO_BROADCAST) failed: %s (%d)\n", errbuf, err);
         return 0;
     }
 
@@ -548,10 +573,13 @@ int main(int argc, char *argv[])
         if (send_magic_packet(sock, &dest, macs[i].value, &err)) {
             printf("WoL sent  ->  %s\n", macs[i].text);
         } else {
-            if (err != 0)
-                fprintf(stderr, "Failed    ->  %s (sendto error: %d)\n", macs[i].text, err);
-            else
-                fprintf(stderr, "Failed    ->  %s (short send)\n", macs[i].text);
+            if (err != 0) {
+                char errbuf[256];
+                net_error_str(err, errbuf, sizeof(errbuf));
+                fprintf(stderr, "Failed    ->  %s  %s (%d)\n", macs[i].text, errbuf, err);
+            } else {
+                fprintf(stderr, "Failed    ->  %s  short send\n", macs[i].text);
+            }
             all_ok = 0;
         }
     }
